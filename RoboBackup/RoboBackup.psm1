@@ -14,6 +14,9 @@ function Invoke-RoboBackup {
         [switch]$All,
 
         [Parameter()]
+        [string]$Config,
+
+        [Parameter()]
         [switch]$Dry
     )
 
@@ -99,24 +102,53 @@ Result:         $ExitMessage
 
     # --- Main Script Logic ---
     $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
-    $ConfigFile = Join-Path $PSScriptRoot "config.json"
     $Jobs = [ordered]@{}
-    if (Test-Path $ConfigFile) {
-        $Config = Get-Content $ConfigFile | ConvertFrom-Json
-        $Config.backupJobs.ForEach({ $Jobs[$_.name] = $_ })
+    $ConfigPath = $null
+
+    # Config loading logic: 1. -Config param, 2. Current dir, 3. Module dir
+    if ($PSBoundParameters.ContainsKey('Config')) {
+        if (Test-Path $Config) {
+            $ConfigPath = $Config
+        } else {
+            Write-Error "Config file not found at path specified with -Config: $Config"
+            return
+        }
+    } else {
+        $CurrentDirConfig = Join-Path (Get-Location) "robobackup.config.json"
+        if (Test-Path $CurrentDirConfig) {
+            $ConfigPath = $CurrentDirConfig
+        } else {
+            $ModulePathConfig = Join-Path $PSScriptRoot "robobackup.config.json"
+            if (Test-Path $ModulePathConfig) {
+                $ConfigPath = $ModulePathConfig
+            }
+        }
+    }
+
+    if ($ConfigPath) {
+        $ConfigContent = Get-Content $ConfigPath | ConvertFrom-Json
+        $ConfigContent.backupJobs.ForEach({ $Jobs[$_.name] = $_ })
     }
 
     # --- Parameter Handling ---
     switch ($PsCmdlet.ParameterSetName) {
         'Job' {
+            if ($Jobs.Count -eq 0) {
+                Write-Error "No configuration file found. Cannot run a named job."
+                return
+            }
             if (-not $Jobs.ContainsKey($Job)) {
-                Write-Error "Job '$Job' not found in config.json"
-                exit 1
+                Write-Error "Job '$Job' not found in the configuration file."
+                return
             }
             $Source = $Jobs[$Job].source
             $Destination = $Jobs[$Job].destination
         }
         'All' {
+            if ($Jobs.Count -eq 0) {
+                Write-Error "No configuration file found. Cannot run all jobs."
+                return
+            }
             Write-Host "Running all pre-defined backup jobs." -ForegroundColor Yellow
             $Jobs.Values | ForEach-Object {
                 Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry
@@ -127,11 +159,6 @@ Result:         $ExitMessage
 
     # --- Execution for Job and Manual modes ---
     if ($PsCmdlet.ParameterSetName -in @('Job', 'Manual')) {
-        $confirmation = Read-Host "Are you sure you want to proceed with the backup? [y/n]"
-        if ($confirmation -ne 'y') {
-            Write-Host "Backup cancelled." -ForegroundColor Red
-            return
-        }
         Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry
         return
     }
@@ -150,6 +177,7 @@ Result:         $ExitMessage
         Write-Host "4. Exit" -ForegroundColor Red
         $mainSelection = Read-Host "Enter your choice [1-4]"
     } else {
+        Write-Host "No config file loaded. You can only run a custom backup." -ForegroundColor Yellow
         $mainSelection = '3' # No jobs, so force custom backup
     }
 

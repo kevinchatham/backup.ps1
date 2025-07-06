@@ -1,5 +1,5 @@
 # User-specific configuration
-config.json
+*config.json
 
 # Log files
 logs/
