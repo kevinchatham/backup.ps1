@@ -1,0 +1,5 @@
+# User-specific configuration
+config.json
+
+# Log files
+logs/
