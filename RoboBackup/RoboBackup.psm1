@@ -26,6 +26,11 @@ function Invoke-RoboBackup {
     .PARAMETER Destination
     The destination directory for a manual (one-off) backup. This parameter is used with -Source.
 
+    .PARAMETER Mirror
+    A switch to perform a mirror backup, which makes the destination an exact copy of the source.
+    If this switch is omitted for a manual backup, the backup will be additive (only copying new/changed files).
+    For jobs defined in the config, this is controlled by the 'mirror' property.
+
     .PARAMETER All
     A switch to run all backup jobs defined in the 'robobackup.json' file sequentially.
 
@@ -43,19 +48,19 @@ function Invoke-RoboBackup {
     Launches the interactive menu to guide the user through backup options.
     .EXAMPLE
     PS C:\> Invoke-RoboBackup -Job "My Documents"
-    Runs the pre-defined backup job named "My Documents".
+    Runs the pre-defined backup job named "My Documents", using the 'mirror' setting from the config.
     .EXAMPLE
     PS C:\> Invoke-RoboBackup -All
     Runs all pre-defined backup jobs from the configuration file.
     .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Source "C:\Users\Me\Photos" -Destination "D:\Backups\Photos" -Mirror
+    Performs a one-off MIRROR backup of the Photos folder.
+    .EXAMPLE
     PS C:\> Invoke-RoboBackup -Source "C:\Users\Me\Photos" -Destination "D:\Backups\Photos"
-    Performs a one-off backup of the Photos folder.
+    Performs a one-off ADDITIVE backup of the Photos folder (does not delete extra files in destination).
     .EXAMPLE
     PS C:\> Invoke-RoboBackup -Job "My Documents" -Dry
     Performs a dry run of the "My Documents" job to see what changes would be made.
-    .EXAMPLE
-    PS C:\> Invoke-RoboBackup -Config "C:\Temp\my-special-config.json" -All
-    Runs all jobs defined in the specified configuration file.
     .EXAMPLE
     PS C:\> Invoke-RoboBackup -Logs
     Opens the log file directory.
@@ -73,6 +78,9 @@ function Invoke-RoboBackup {
 
         [Parameter(ParameterSetName = 'Manual', Mandatory = $true)]
         [string]$Destination,
+
+        [Parameter(ParameterSetName = 'Manual')]
+        [switch]$Mirror,
 
         [Parameter(ParameterSetName = 'All', Mandatory = $true)]
         [switch]$All,
@@ -104,16 +112,19 @@ function Invoke-RoboBackup {
         }
 
         # Core function to execute a single backup job.
-        function Start-BackupJob($SourcePath, $DestinationPath, $IsDryRun) {
+        function Start-BackupJob($SourcePath, $DestinationPath, $IsDryRun, $MirrorBackup) {
             Write-Host "---------------------------------------------" -ForegroundColor Cyan
             Write-Host "Starting Backup..."
             Write-Host "Source:      $SourcePath" -ForegroundColor White
             Write-Host "Destination: $DestinationPath" -ForegroundColor White
             if ($IsDryRun) {
-                Write-Host "Mode:        Dry Run (No files will be copied)" -ForegroundColor Yellow
+                Write-Host "Mode:        Dry Run (No files will be changed)" -ForegroundColor Yellow
+            }
+            if ($MirrorBackup) {
+                Write-Host "Type:        Mirror (Destination will match source exactly)" -ForegroundColor Magenta
             }
             else {
-                Write-Host "Mode:        Standard Backup" -ForegroundColor Green
+                Write-Host "Type:        Additive (New/changed files are copied)" -ForegroundColor Green
             }
             Write-Host "---------------------------------------------" -ForegroundColor Cyan
 
@@ -132,12 +143,19 @@ function Invoke-RoboBackup {
 Start Time:     $Timestamp
 Source:         $SourcePath
 Destination:    $DestinationPath
-Mode:           $($IsDryRun ? 'Dry Run' : 'Standard Backup')
+Mode:           $($IsDryRun ? 'Dry Run' : 'Live')
+Type:           $($MirrorBackup ? 'Mirror' : 'Additive')
 =============================================
 "@
             $LogHeader | Out-File -FilePath $LogFile -Encoding utf8
 
-            $RobocopyArgs = @($SourcePath, $DestinationPath, "/MIR", "/E", "/R:3", "/W:10", "/LOG+:$LogFile", "/TEE")
+            $RobocopyArgs = @($SourcePath, $DestinationPath, "/R:3", "/W:10", "/LOG+:$LogFile", "/TEE")
+            if ($MirrorBackup) {
+                $RobocopyArgs += "/MIR"
+            }
+            else {
+                $RobocopyArgs += "/E"
+            }
             if ($IsDryRun) { $RobocopyArgs += "/L" }
 
             robocopy @RobocopyArgs
@@ -175,83 +193,72 @@ Result:         $ExitMessage
         $Jobs = [ordered]@{}
         $ConfigPath = $null
 
-        # Config loading logic: 1. -Config param, 2. Current dir, 3. Module dir
+        # Config loading logic
         if ($PSBoundParameters.ContainsKey('Config')) {
-            if (Test-Path $Config) {
-                $ConfigPath = $Config
-            }
-            else {
-                Write-Error "Config file not found at path specified with -Config: $Config"
-                return
-            }
+            if (Test-Path $Config) { $ConfigPath = $Config }
+            else { Write-Error "Config file not found at path: $Config"; return }
         }
         else {
             $CurrentDirConfig = Join-Path (Get-Location) "robobackup.json"
-            if (Test-Path $CurrentDirConfig) {
-                $ConfigPath = $CurrentDirConfig
-            }
+            if (Test-Path $CurrentDirConfig) { $ConfigPath = $CurrentDirConfig }
             else {
                 $ModulePathConfig = Join-Path $PSScriptRoot "robobackup.json"
-                if (Test-Path $ModulePathConfig) {
-                    $ConfigPath = $ModulePathConfig
-                }
+                if (Test-Path $ModulePathConfig) { $ConfigPath = $ModulePathConfig }
             }
         }
 
         if ($ConfigPath) {
             $ConfigContent = Get-Content $ConfigPath | ConvertFrom-Json
-            $ConfigContent.jobs.ForEach({ $Jobs[$_.name] = $_ })
-            # Change to the config file's directory so relative paths work as expected
-            $ConfigDir = Split-Path -Path $ConfigPath -Parent
-            if ($ConfigDir) {
-                Set-Location -Path $ConfigDir
+            foreach ($job in $ConfigContent.jobs) {
+                if (-not $job.PSObject.Properties.Names.Contains('name') -or -not $job.PSObject.Properties.Names.Contains('source') -or -not $job.PSObject.Properties.Names.Contains('destination') -or -not $job.PSObject.Properties.Names.Contains('mirror')) {
+                    Write-Error "A job in '$ConfigPath' is missing one of the required properties: 'name', 'source', 'destination', or 'mirror'."
+                    return
+                }
+                $Jobs[$job.name] = $job
             }
+            $ConfigDir = Split-Path -Path $ConfigPath -Parent
+            if ($ConfigDir) { Set-Location -Path $ConfigDir }
         }
 
         # --- Parameter Handling ---
         switch ($PsCmdlet.ParameterSetName) {
             'Job' {
-                if ($Jobs.Count -eq 0) {
-                    Write-Error "No configuration file found. Cannot run a named job."
-                    return
-                }
-                if (-not $Jobs.ContainsKey($Job)) {
-                    Write-Error "Job '$Job' not found in the configuration file."
-                    return
-                }
+                if ($Jobs.Count -eq 0) { Write-Error "No configuration file found."; return }
+                if (-not $Jobs.ContainsKey($Job)) { Write-Error "Job '$Job' not found."; return }
                 $Source = $Jobs[$Job].source
                 $Destination = $Jobs[$Job].destination
             }
             'All' {
-                if ($Jobs.Count -eq 0) {
-                    Write-Error "No configuration file found. Cannot run all jobs."
-                    return
-                }
+                if ($Jobs.Count -eq 0) { Write-Error "No configuration file found."; return }
                 Write-Host "Running all pre-defined backup jobs." -ForegroundColor Yellow
                 $Jobs.Values | ForEach-Object {
-                    Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry
+                    if ($_.PSObject.Properties.Names -notcontains 'mirror') {
+                        Write-Error "Job '$($_.name)' is missing the required 'mirror' property."
+                        return
+                    }
+                    Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry -MirrorBackup:$_.mirror
                 }
                 return
             }
             'Logs' {
                 $LogDir = Join-Path $PSScriptRoot "logs"
-                if (-not (Test-Path $LogDir)) {
-                    New-Item -ItemType Directory -Path $LogDir | Out-Null
-                }
-                
+                if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
                 $VSCodePath = Get-Command code -ErrorAction SilentlyContinue
-                if ($null -ne $VSCodePath) {
-                    code $LogDir
-                } else {
-                    explorer $LogDir
-                }
+                if ($null -ne $VSCodePath) { code $LogDir } else { explorer $LogDir }
                 return
             }
         }
 
         # --- Execution for Job and Manual modes ---
         if ($PsCmdlet.ParameterSetName -in @('Job', 'Manual')) {
-            Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry
+            $isMirror = $false
+            if ($PsCmdlet.ParameterSetName -eq 'Job') {
+                $isMirror = if ($Jobs[$Job].PSObject.Properties.Names -contains 'mirror') { $Jobs[$Job].mirror } else { $true }
+            }
+            elseif ($PsCmdlet.ParameterSetName -eq 'Manual') {
+                $isMirror = $Mirror.IsPresent
+            }
+            Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry -MirrorBackup:$isMirror
             return
         }
 
@@ -267,6 +274,8 @@ Result:         $ExitMessage
         # --- Interactive Mode ---
         while ($true) {
             Show-Header
+            $Source, $Destination, $isMirror, $All, $Dry = $null, $null, $null, $false, $false
+
             if ($Jobs.Count -gt 0) {
                 Write-Host "1. Run a single pre-defined job" -ForegroundColor Green
                 Write-Host "2. Run all pre-defined jobs" -ForegroundColor Magenta
@@ -303,47 +312,27 @@ Result:         $ExitMessage
                     $jobName = ($Jobs.Keys | Select-Object -Index $jobIndex)
                     $Source = $Jobs[$jobName].source
                     $Destination = $Jobs[$jobName].destination
+                    $isMirror = if ($Jobs[$jobName].PSObject.Properties.Names -contains 'mirror') { $Jobs[$jobName].mirror } else { $true }
                 }
-                '2' {
-                    $All = $true
-                }
+                '2' { $All = $true }
                 '3' {
                     Show-Header
                     $Source = Read-Host "Enter the source path"
                     $Destination = Read-Host "Enter the destination path"
+                    $mirrorSelection = Read-Host "Perform a mirror backup (deletes extra files at destination)? [y/n]"
+                    $isMirror = $mirrorSelection -eq 'y'
                 }
                 '4' {
                     $LogDir = Join-Path $PSScriptRoot "logs"
-                    if (-not (Test-Path $LogDir)) {
-                        New-Item -ItemType Directory -Path $LogDir
-                    }
-                    
+                    if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir }
                     $VSCodePath = Get-Command code -ErrorAction SilentlyContinue
-                    if ($null -ne $VSCodePath) {
-                        Write-Host
-                        Write-Host "Opening logs directory in Visual Studio Code..." -ForegroundColor Green
-                        code $LogDir
-                    }
-                    else {
-                        Write-Host
-                        Write-Host "Opening logs directory in File Explorer..." -ForegroundColor Green
-                        explorer $LogDir
-                    }
+                    if ($null -ne $VSCodePath) { code $LogDir } else { explorer $LogDir }
                     Start-Sleep -Seconds 2
                     continue
                 }
-                '5' {
-                    Show-Header
-                    Get-Help $MyInvocation.MyCommand -Full
-                }
-                '6' {
-                    return # Exit the function, thus ending the script
-                }
-                default {
-                    Write-Warning "Invalid selection. Please try again."
-                    Start-Sleep -Seconds 2
-                    continue # Skip the rest of the loop and restart
-                }
+                '5' { Show-Header; Get-Help $MyInvocation.MyCommand -Full }
+                '6' { return }
+                default { Write-Warning "Invalid selection."; Start-Sleep -Seconds 2; continue }
             }
 
             if ($All) {
@@ -354,34 +343,30 @@ Result:         $ExitMessage
                 if ($dryRunSelection -eq 'y') { $Dry = $true }
 
                 $Jobs.Values | ForEach-Object {
-                    Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry
+                    if ($_.PSObject.Properties.Names -notcontains 'mirror') {
+                        Write-Error "Job '$($_.name)' is missing the required 'mirror' property."
+                        return
+                    }
+                    Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry -MirrorBackup:$_.mirror
                 }
             }
             elseif (-not ([string]::IsNullOrEmpty($Source))) {
                 Show-Header
                 Write-Host "Source:      $Source"
                 Write-Host "Destination: $Destination"
+                Write-Host "Mirror Mode: $($isMirror)" -ForegroundColor Yellow
                 Write-Host
                 $dryRunSelection = Read-Host "Perform a dry run (no files copied)? [y/n]"
                 if ($dryRunSelection -eq 'y') { $Dry = $true }
 
                 Write-Host
                 $confirmation = Read-Host "Are you sure you want to proceed with the backup? [y/n]"
-                if ($confirmation -ne 'y') {
-                    Write-Host "Backup cancelled." -ForegroundColor Red
-                }
-                else {
-                    Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry
-                }
+                if ($confirmation -ne 'y') { Write-Host "Backup cancelled." -ForegroundColor Red }
+                else { Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry -MirrorBackup:$isMirror }
             }
 
             Write-Host
             Read-Host "Press Enter to return to the main menu..."
-            # Reset variables for the next loop iteration
-            $Source = $null
-            $Destination = $null
-            $All = $false
-            $Dry = $false
         }
     }
     finally {

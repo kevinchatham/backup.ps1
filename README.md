@@ -65,8 +65,16 @@ For those who prefer not to run the installation script directly, you can perfor
 
 ## Configuration
 
-The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define your backup jobs. The script searches for this file in the following order of priority:
+The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define your backup jobs. Each job in the configuration **must** have the following four properties:
 
+-   `"name"`: A unique name to identify the job.
+-   `"source"`: The directory to back up.
+-   `"destination"`: The directory where the backup will be stored.
+-   `"mirror"`: A boolean (`true` or `false`) to define the backup type.
+    -   `true`: Performs a **mirror** backup (`/MIR`), which makes the destination an exact copy of the source. Any files in the destination that do not exist in the source will be **deleted**.
+    -   `false`: Performs an **additive** backup (`/E`), which copies new and updated files without deleting extra files from the destination.
+
+The script searches for this file in the following order of priority:
 1.  A specific file path provided using the `-Config "C:\Path\to\robobackup.json"` parameter.
 2.  A file named `robobackup.json` in the current working directory.
 3.  A file named `robobackup.json` in the module's installation directory (`~\Documents\PowerShell\Modules\RoboBackup`).
@@ -85,20 +93,22 @@ This design makes your backup configurations highly portable. By placing a `robo
         {
           "jobs": [
             {
-              "name": "This Folder's Contents",
-              "source": ".",
-              "destination": "D:\\Backups\\MyFolder"
+              "name": "Documents (Mirror)",
+              "source": "C:\\Users\\Me\\Documents",
+              "destination": "D:\\Backups\\Documents",
+              "mirror": true
             },
             {
-              "name": "Photos Archive",
-              "source": "E:\\Photos",
-              "destination": "\\\\MyNAS\\Backups\\Photos"
+              "name": "Downloads (Additive)",
+              "source": "C:\\Users\\Me\\Downloads",
+              "destination": "D:\\Backups\\Downloads",
+              "mirror": false
             }
           ]
         }
         ```
 
-    In the example above, if this `robobackup.json` is placed in `C:\Users\Me\Documents\MyFolder`, the `source` of `.` will be resolved to `C:\Users\Me\Documents\MyFolder`.
+    In the example above, the "Documents" job will delete files from the backup if they are removed from the source, while the "Downloads" job will only add new files.
 
 ## Usage
 
@@ -114,9 +124,9 @@ Invoke-RoboBackup
 
 From the main menu, you can:
 
-- Run a single pre-defined job.
+- Run a single pre-defined job (respecting its `mirror` setting).
 - Run all pre-defined jobs sequentially.
-- Run a custom one-off backup.
+- Run a custom one-off backup, where you will be prompted to choose between a **mirror** or **additive** backup.
 - Open the logs directory.
 - Display the full command-line help.
 - Exit the utility.
@@ -128,8 +138,9 @@ You can also run backups directly from the command line.
 #### **Run a Pre-defined Job**
 
 ```powershell
-Invoke-RoboBackup -Job "My Documents"
+Invoke-RoboBackup -Job "Documents (Mirror)"
 ```
+This command runs the job as defined in the configuration, respecting its `mirror` property.
 
 #### **Run All Pre-defined Jobs**
 
@@ -139,16 +150,23 @@ Invoke-RoboBackup -All
 
 #### **Perform a Manual (One-Off) Backup**
 
-```powershell
-Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\BackupLocation"
-```
+For manual backups, you can control the mirror behavior with the `-Mirror` switch.
+
+-   **Mirror Backup** (Deletes extra files at destination):
+    ```powershell
+    Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\BackupLocation" -Mirror
+    ```
+-   **Additive Backup** (Default for manual, does not delete):
+    ```powershell
+    Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\BackupLocation"
+    ```
 
 #### **Perform a Dry Run**
 
 Add the `-Dry` switch to any command to see what _would_ happen without changing any files.
 
 ```powershell
-Invoke-RoboBackup -Job "Photos Archive" -Dry
+Invoke-RoboBackup -Job "Documents (Mirror)" -Dry
 ```
 
 ### Parameters
@@ -159,6 +177,7 @@ Invoke-RoboBackup -Job "Photos Archive" -Dry
 | `-All`                  | A switch to run all backup jobs defined in your `robobackup.json`.           |
 | `-Source <string>`      | The source directory for a manual (one-off) backup.                          |
 | `-Destination <string>` | The destination directory for a manual (one-off) backup.                     |
+| `-Mirror`               | A switch to perform a mirror backup for a manual job. If omitted, the backup is additive. |
 | `-Config <string>`      | Specifies the full path to a `robobackup.json` file to use.                  |
 | `-Dry`                  | A switch to perform a dry run, simulating the backup without making changes. |
 | `-Logs`                 | A switch to open the logs directory in VS Code or File Explorer.             |
