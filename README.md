@@ -40,19 +40,21 @@ The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define you
 2.  A file named `robobackup.json` in the current working directory.
 3.  A file named `robobackup.json` in the module's installation directory (`~\Documents\PowerShell\Modules\RoboBackup`).
 
+When a configuration file is loaded, the script automatically changes its working directory to the directory containing the `robobackup.json` file. This ensures that any **relative paths** used in the `source` and `destination` fields are resolved correctly from the location of the configuration file, not from where the script was invoked. The original working directory is restored when the script finishes.
+
 ### Getting Started
 
 1.  **Download the Template**: Get the configuration template file, [`robobackup.template.json`](https://github.com/kevinchatham/backup.ps1/blob/main/robobackup.template.json), directly from the repository.
 2.  **Rename and Place the File**: Rename it to `robobackup.json` and place it where you intend to run your backups.
-3.  **Define Your Backup Jobs**: Open `robobackup.json` and define your jobs.
+3.  **Define Your Backup Jobs**: Open `robobackup.json` and define your jobs. You can use relative paths for portability.
 
     ```json
     {
       "jobs": [
         {
-          "name": "My Documents",
-          "source": "C:\\Users\\YourUser\\Documents",
-          "destination": "D:\\Backups\\Documents"
+          "name": "Project Files",
+          "source": ".\\project-a",
+          "destination": "D:\\Backups\\Project-A"
         },
         {
           "name": "Photos Archive",
@@ -62,6 +64,8 @@ The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define you
       ]
     }
     ```
+In the example above, `./project-a` will be resolved relative to the directory where `robobackup.json` is located.
+
 
 ## Usage
 
