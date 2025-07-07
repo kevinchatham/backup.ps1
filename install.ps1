@@ -5,7 +5,8 @@ $RepoOwner = "kevinchatham"
 $RepoName = "backup.ps1" # Replace with your repository name
 
 # Determine the user's module path
-$ModulePath = Join-Path $env:USERPROFILE "Documents\PowerShell\Modules"
+$DocumentsPath = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::MyDocuments)
+$ModulePath = Join-Path $DocumentsPath "PowerShell\Modules"
 if (-not (Test-Path $ModulePath)) {
     New-Item -ItemType Directory -Path $ModulePath -Force
 }
