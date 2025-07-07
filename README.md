@@ -82,6 +82,7 @@ From the main menu, you can:
 *   Run a single pre-defined job from your `robobackup.json`.
 *   Run all pre-defined jobs sequentially.
 *   Run a custom one-off backup by providing the source and destination.
+*   Open the logs directory in VS Code (if installed) or File Explorer.
 *   Display the full command-line help documentation.
 *   Exit the utility.
 
@@ -132,6 +133,14 @@ Invoke-RoboBackup -All -Dry
 
 # Dry run of a manual backup
 Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\Some\BackupLocation" -Dry
+```
+
+### Opening the Logs Directory
+
+To quickly open the directory containing all the log files, use the `-Logs` switch. This will attempt to open the folder in Visual Studio Code if it's installed, otherwise it will fall back to the default Windows File Explorer.
+
+```powershell
+Invoke-RoboBackup -Logs
 ```
 
 ## Robocopy Exit Codes

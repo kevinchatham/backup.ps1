@@ -35,6 +35,9 @@ function Invoke-RoboBackup {
     .PARAMETER Dry
     A switch to perform a dry run. This will simulate the backup operation, showing what would be copied or deleted, without making any actual changes.
 
+    .PARAMETER Logs
+    A switch to open the logs directory in Visual Studio Code (if available) or the default file explorer.
+
     .EXAMPLE
     PS C:\> Invoke-RoboBackup
     Launches the interactive menu to guide the user through backup options.
@@ -53,6 +56,9 @@ function Invoke-RoboBackup {
     .EXAMPLE
     PS C:\> Invoke-RoboBackup -Config "C:\Temp\my-special-config.json" -All
     Runs all jobs defined in the specified configuration file.
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Logs
+    Opens the log file directory.
 
     .LINK
     https://github.com/kevinchatham/backup.ps1
@@ -70,6 +76,9 @@ function Invoke-RoboBackup {
 
         [Parameter(ParameterSetName = 'All', Mandatory = $true)]
         [switch]$All,
+
+        [Parameter(ParameterSetName = 'Logs', Mandatory = $true)]
+        [switch]$Logs,
 
         [Parameter()]
         [string]$Config,
@@ -100,7 +109,8 @@ function Invoke-RoboBackup {
         Write-Host "Destination: $DestinationPath" -ForegroundColor White
         if ($IsDryRun) {
             Write-Host "Mode:        Dry Run (No files will be copied)" -ForegroundColor Yellow
-        } else {
+        }
+        else {
             Write-Host "Mode:        Standard Backup" -ForegroundColor Green
         }
         Write-Host "---------------------------------------------" -ForegroundColor Cyan
@@ -143,7 +153,8 @@ Result:         $ExitMessage
 
         if ($ExitCode -lt 8) {
             Write-Host $ExitMessage -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host $ExitMessage -ForegroundColor Red
         }
 
@@ -159,7 +170,6 @@ Result:         $ExitMessage
     }
 
     # --- Main Script Logic ---
-    $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
     $Jobs = [ordered]@{}
     $ConfigPath = $null
 
@@ -167,15 +177,18 @@ Result:         $ExitMessage
     if ($PSBoundParameters.ContainsKey('Config')) {
         if (Test-Path $Config) {
             $ConfigPath = $Config
-        } else {
+        }
+        else {
             Write-Error "Config file not found at path specified with -Config: $Config"
             return
         }
-    } else {
+    }
+    else {
         $CurrentDirConfig = Join-Path (Get-Location) "robobackup.json"
         if (Test-Path $CurrentDirConfig) {
             $ConfigPath = $CurrentDirConfig
-        } else {
+        }
+        else {
             $ModulePathConfig = Join-Path $PSScriptRoot "robobackup.json"
             if (Test-Path $ModulePathConfig) {
                 $ConfigPath = $ModulePathConfig
@@ -213,6 +226,20 @@ Result:         $ExitMessage
             }
             return
         }
+        'Logs' {
+            $LogDir = Join-Path $PSScriptRoot "logs"
+            if (-not (Test-Path $LogDir)) {
+                New-Item -ItemType Directory -Path $LogDir | Out-Null
+            }
+            
+            $VSCodePath = Get-Command code -ErrorAction SilentlyContinue
+            if ($null -ne $VSCodePath) {
+                code $LogDir
+            } else {
+                explorer $LogDir
+            }
+            return
+        }
     }
 
     # --- Execution for Job and Manual modes ---
@@ -237,21 +264,25 @@ Result:         $ExitMessage
             Write-Host "1. Run a single pre-defined job" -ForegroundColor Green
             Write-Host "2. Run all pre-defined jobs" -ForegroundColor Magenta
             Write-Host "3. Run a custom one-off backup" -ForegroundColor Yellow
-            Write-Host "4. Help" -ForegroundColor Cyan
-            Write-Host "5. Exit" -ForegroundColor Red
+            Write-Host "4. Open Logs Directory" -ForegroundColor Cyan
+            Write-Host "5. Help" -ForegroundColor Cyan
+            Write-Host "6. Exit" -ForegroundColor Red
             Write-Host
-            $mainSelection = Read-Host "Enter your choice [1-5]"
-        } else {
+            $mainSelection = Read-Host "Enter your choice [1-6]"
+        }
+        else {
             Write-Host "No robobackup.json file loaded." -ForegroundColor Yellow
             Write-Host "1. Run a custom one-off backup"
-            Write-Host "2. Help"
-            Write-Host "3. Exit"
+            Write-Host "2. Open Logs Directory"
+            Write-Host "3. Help"
+            Write-Host "4. Exit"
             Write-Host
-            $customOnlySelection = Read-Host "Enter your choice [1-3]"
-            switch($customOnlySelection) {
+            $customOnlySelection = Read-Host "Enter your choice [1-4]"
+            switch ($customOnlySelection) {
                 '1' { $mainSelection = '3' }
                 '2' { $mainSelection = '4' }
                 '3' { $mainSelection = '5' }
+                '4' { $mainSelection = '6' }
             }
         }
 
@@ -275,10 +306,30 @@ Result:         $ExitMessage
                 $Destination = Read-Host "Enter the destination path"
             }
             '4' {
+                $LogDir = Join-Path $PSScriptRoot "logs"
+                if (-not (Test-Path $LogDir)) {
+                    New-Item -ItemType Directory -Path $LogDir
+                }
+                
+                $VSCodePath = Get-Command code -ErrorAction SilentlyContinue
+                if ($null -ne $VSCodePath) {
+                    Write-Host
+                    Write-Host "Opening logs directory in Visual Studio Code..." -ForegroundColor Green
+                    code $LogDir
+                }
+                else {
+                    Write-Host
+                    Write-Host "Opening logs directory in File Explorer..." -ForegroundColor Green
+                    explorer $LogDir
+                }
+                Start-Sleep -Seconds 2
+                continue
+            }
+            '5' {
                 Show-Header
                 Get-Help $MyInvocation.MyCommand -Full
             }
-            '5' {
+            '6' {
                 return # Exit the function, thus ending the script
             }
             default {
@@ -298,7 +349,8 @@ Result:         $ExitMessage
             $Jobs.Values | ForEach-Object {
                 Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry
             }
-        } elseif (-not ([string]::IsNullOrEmpty($Source))) {
+        }
+        elseif (-not ([string]::IsNullOrEmpty($Source))) {
             Show-Header
             Write-Host "Source:      $Source"
             Write-Host "Destination: $Destination"
@@ -310,7 +362,8 @@ Result:         $ExitMessage
             $confirmation = Read-Host "Are you sure you want to proceed with the backup? [y/n]"
             if ($confirmation -ne 'y') {
                 Write-Host "Backup cancelled." -ForegroundColor Red
-            } else {
+            }
+            else {
                 Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry
             }
         }
