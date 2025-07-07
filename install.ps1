@@ -34,11 +34,10 @@ $TempUnzip = Join-Path $env:TEMP "RoboBackup-Unzipped"
 Expand-Archive -Path $TempZip -DestinationPath $TempUnzip -Force
 $SourcePath = Join-Path $TempUnzip "$RepoName-main"
 
-# Create the final installation directory
-New-Item -ItemType Directory -Path $InstallPath -Force
+# Copy the entire module folder to the user's module path
+Copy-Item -Path (Join-Path $SourcePath $ModuleName) -Destination $ModulePath -Recurse -Force
 
-# Copy the module files, license, and readme
-Copy-Item -Path (Join-Path $SourcePath $ModuleName "\*") -Destination $InstallPath -Recurse -Force
+# Copy the license and readme into the new module folder
 Copy-Item -Path (Join-Path $SourcePath "LICENSE") -Destination $InstallPath -Force
 Copy-Item -Path (Join-Path $SourcePath "README.md") -Destination $InstallPath -Force
 
