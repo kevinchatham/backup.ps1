@@ -251,6 +251,9 @@ Result:         $ExitMessage
         }
 
         if ($ConfigPath) {
+            if ($PsCmdlet.ParameterSetName -in @('Job', 'All', 'Interactive')) {
+                Write-Host "Using configuration file: $ConfigPath" -ForegroundColor DarkGray
+            }
             $ConfigContent = Get-Content $ConfigPath | ConvertFrom-Json
             foreach ($job in $ConfigContent.jobs) {
                 if (-not $job.PSObject.Properties.Names.Contains('name') -or -not $job.PSObject.Properties.Names.Contains('source') -or -not $job.PSObject.Properties.Names.Contains('destination') -or -not $job.PSObject.Properties.Names.Contains('mirror')) {
@@ -268,17 +271,14 @@ Result:         $ExitMessage
             'Job' {
                 if ($Jobs.Count -eq 0) { Write-Error "No configuration file found."; return }
                 if (-not $Jobs.ContainsKey($Job)) { Write-Error "Job '$Job' not found."; return }
-                $Source = $Jobs[$Job].source
-                $Destination = $Jobs[$Job].destination
+                $jobToRun = $Jobs[$Job]
+                Start-BackupJob -SourcePath $jobToRun.source -DestinationPath $jobToRun.destination -IsDryRun:$Dry -MirrorBackup:$jobToRun.mirror
+                return
             }
             'All' {
                 if ($Jobs.Count -eq 0) { Write-Error "No configuration file found."; return }
                 Write-Host "Running all pre-defined backup jobs." -ForegroundColor Yellow
                 $Jobs.Values | ForEach-Object {
-                    if ($_.PSObject.Properties.Names -notcontains 'mirror') {
-                        Write-Error "Job '$($_.name)' is missing the required 'mirror' property."
-                        return
-                    }
                     Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry -MirrorBackup:$_.mirror
                 }
                 return
@@ -292,16 +292,9 @@ Result:         $ExitMessage
             }
         }
 
-        # --- Execution for Job and Manual modes ---
-        if ($PsCmdlet.ParameterSetName -in @('Job', 'Manual')) {
-            $isMirror = $false
-            if ($PsCmdlet.ParameterSetName -eq 'Job') {
-                $isMirror = if ($Jobs[$Job].PSObject.Properties.Names -contains 'mirror') { $Jobs[$Job].mirror } else { $true }
-            }
-            elseif ($PsCmdlet.ParameterSetName -eq 'Manual') {
-                $isMirror = $Mirror.IsPresent
-            }
-            Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry -MirrorBackup:$isMirror
+        # --- Execution for Manual mode ---
+        if ($PsCmdlet.ParameterSetName -eq 'Manual') {
+            Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry -MirrorBackup:$Mirror.IsPresent
             return
         }
 
