@@ -2,7 +2,7 @@
 
 $ModuleName = "RoboBackup"
 $RepoOwner = "kevinchatham"
-$RepoName = "backup" # Replace with your repository name
+$RepoName = "backup.ps1" # Replace with your repository name
 
 # Determine the user's module path
 $ModulePath = Join-Path $env:USERPROFILE "Documents\PowerShell\Modules"

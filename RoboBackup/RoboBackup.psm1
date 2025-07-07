@@ -1,4 +1,62 @@
 function Invoke-RoboBackup {
+    <#
+    .SYNOPSIS
+    A flexible backup utility using Robocopy with an interactive menu and JSON-based job configuration.
+
+    .DESCRIPTION
+    Invoke-RoboBackup is a powerful wrapper for the Windows Robocopy tool. It can be run in several modes:
+    - Interactive Mode: If run with no parameters, it provides a menu to run pre-defined jobs, all jobs, or a custom one-off backup.
+    - Job Mode (-Job): Runs a single, specific backup job defined in the configuration file.
+    - All Jobs Mode (-All): Runs all backup jobs defined in the configuration file sequentially.
+    - Manual Mode (-Source, -Destination): Runs a one-off backup with the specified source and destination paths.
+
+    The script automatically handles logging, log rotation, and provides clear success or failure messages.
+
+    It locates the configuration file 'robobackup.json' by searching the following locations in order:
+    1. The path specified by the -Config parameter.
+    2. The current working directory.
+    3. The script's own module directory.
+
+    .PARAMETER Job
+    The name of a specific backup job to run, as defined in the 'robobackup.json' file.
+
+    .PARAMETER Source
+    The source directory for a manual (one-off) backup. This parameter is used with -Destination.
+
+    .PARAMETER Destination
+    The destination directory for a manual (one-off) backup. This parameter is used with -Source.
+
+    .PARAMETER All
+    A switch to run all backup jobs defined in the 'robobackup.json' file sequentially.
+
+    .PARAMETER Config
+    Specifies the full path to a 'robobackup.json' file. If omitted, the script will search in the current directory and then the module directory.
+
+    .PARAMETER Dry
+    A switch to perform a dry run. This will simulate the backup operation, showing what would be copied or deleted, without making any actual changes.
+
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup
+    Launches the interactive menu to guide the user through backup options.
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Job "My Documents"
+    Runs the pre-defined backup job named "My Documents".
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -All
+    Runs all pre-defined backup jobs from the configuration file.
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Source "C:\Users\Me\Photos" -Destination "D:\Backups\Photos"
+    Performs a one-off backup of the Photos folder.
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Job "My Documents" -Dry
+    Performs a dry run of the "My Documents" job to see what changes would be made.
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Config "C:\Temp\my-special-config.json" -All
+    Runs all jobs defined in the specified configuration file.
+
+    .LINK
+    https://github.com/kevinchatham/backup.ps1
+    #>
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]
     param(
         [Parameter(ParameterSetName = 'Job', Mandatory = $true)]
@@ -29,7 +87,7 @@ function Invoke-RoboBackup {
             3 { return "Success: Files were copied and extra files were detected." }
             5 { return "Warning: Some files were mismatched and did not copy." }
             6 { return "Warning: Mismatched files and extra files were detected." }
-            7 { return "Warning: Files were copied, but some were mismatched and extra files were detected." }
+            7 { return "Success: Files were copied, but some were mismatched and extra files were detected." }
             default { return "Error: Robocopy failed with critical errors (Code: $exitCode). Check the log for details." }
         }
     }
@@ -114,11 +172,11 @@ Result:         $ExitMessage
             return
         }
     } else {
-        $CurrentDirConfig = Join-Path (Get-Location) "robobackup.config.json"
+        $CurrentDirConfig = Join-Path (Get-Location) "robobackup.json"
         if (Test-Path $CurrentDirConfig) {
             $ConfigPath = $CurrentDirConfig
         } else {
-            $ModulePathConfig = Join-Path $PSScriptRoot "robobackup.config.json"
+            $ModulePathConfig = Join-Path $PSScriptRoot "robobackup.json"
             if (Test-Path $ModulePathConfig) {
                 $ConfigPath = $ModulePathConfig
             }
@@ -163,64 +221,106 @@ Result:         $ExitMessage
         return
     }
 
+    # --- Interactive Mode UI Functions ---
+    function Show-Header {
+        Clear-Host
+        Write-Host "=============================================" -ForegroundColor Cyan
+        Write-Host "              RoboBackup" -ForegroundColor White
+        Write-Host "=============================================" -ForegroundColor Cyan
+        Write-Host
+    }
+
     # --- Interactive Mode ---
-    Clear-Host
-    Write-Host "=============================================" -ForegroundColor Cyan
-    Write-Host "         Robocopy Backup Utility" -ForegroundColor White
-    Write-Host "=============================================" -ForegroundColor Cyan
-    Write-Host
+    while ($true) {
+        Show-Header
+        if ($Jobs.Count -gt 0) {
+            Write-Host "1. Run a single pre-defined job" -ForegroundColor Green
+            Write-Host "2. Run all pre-defined jobs" -ForegroundColor Magenta
+            Write-Host "3. Run a custom one-off backup" -ForegroundColor Yellow
+            Write-Host "4. Help" -ForegroundColor Cyan
+            Write-Host "5. Exit" -ForegroundColor Red
+            Write-Host
+            $mainSelection = Read-Host "Enter your choice [1-5]"
+        } else {
+            Write-Host "No robobackup.json file loaded." -ForegroundColor Yellow
+            Write-Host "1. Run a custom one-off backup"
+            Write-Host "2. Help"
+            Write-Host "3. Exit"
+            Write-Host
+            $customOnlySelection = Read-Host "Enter your choice [1-3]"
+            switch($customOnlySelection) {
+                '1' { $mainSelection = '3' }
+                '2' { $mainSelection = '4' }
+                '3' { $mainSelection = '5' }
+            }
+        }
 
-    if ($Jobs.Count -gt 0) {
-        Write-Host "1. Run a single pre-defined job" -ForegroundColor Green
-        Write-Host "2. Run all pre-defined jobs" -ForegroundColor Magenta
-        Write-Host "3. Run a custom one-off backup" -ForegroundColor Yellow
-        Write-Host "4. Exit" -ForegroundColor Red
-        $mainSelection = Read-Host "Enter your choice [1-4]"
-    } else {
-        Write-Host "No config file loaded. You can only run a custom backup." -ForegroundColor Yellow
-        $mainSelection = '3' # No jobs, so force custom backup
-    }
+        switch ($mainSelection) {
+            '1' {
+                Show-Header
+                $i = 1
+                $Jobs.Keys | ForEach-Object { Write-Host "$i. $_" -ForegroundColor White; $i++ }
+                Write-Host
+                $jobIndex = [int](Read-Host "Select a job") - 1
+                $jobName = ($Jobs.Keys | Select-Object -Index $jobIndex)
+                $Source = $Jobs[$jobName].source
+                $Destination = $Jobs[$jobName].destination
+            }
+            '2' {
+                $All = $true
+            }
+            '3' {
+                Show-Header
+                $Source = Read-Host "Enter the source path"
+                $Destination = Read-Host "Enter the destination path"
+            }
+            '4' {
+                Show-Header
+                Get-Help $MyInvocation.MyCommand -Full
+            }
+            '5' {
+                return # Exit the function, thus ending the script
+            }
+            default {
+                Write-Warning "Invalid selection. Please try again."
+                Start-Sleep -Seconds 2
+                continue # Skip the rest of the loop and restart
+            }
+        }
 
-    switch ($mainSelection) {
-        '1' {
-            $i = 1
-            $Jobs.Keys | ForEach-Object { Write-Host "$i. $_" -ForegroundColor White; $i++ }
-            $jobIndex = [int](Read-Host "Select a job") - 1
-            $jobName = ($Jobs.Keys | Select-Object -Index $jobIndex)
-            $Source = $Jobs[$jobName].source
-            $Destination = $Jobs[$jobName].destination
-        }
-        '2' {
-            $All = $true
-        }
-        '3' {
-            $Source = Read-Host "Enter the source path"
-            $Destination = Read-Host "Enter the destination path"
-        }
-        default {
-            return
-        }
-    }
+        if ($All) {
+            Show-Header
+            Write-Host "Running all pre-defined backup jobs." -ForegroundColor Yellow
+            Write-Host
+            $dryRunSelection = Read-Host "Perform a dry run (no files copied)? [y/n]"
+            if ($dryRunSelection -eq 'y') { $Dry = $true }
 
-    if ($All) {
-        Write-Host "Perform a dry run (no files copied)?" -ForegroundColor White
-        $dryRunSelection = Read-Host "[y/n]"
-        if ($dryRunSelection -eq 'y') { $Dry = $true }
+            $Jobs.Values | ForEach-Object {
+                Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry
+            }
+        } elseif (-not ([string]::IsNullOrEmpty($Source))) {
+            Show-Header
+            Write-Host "Source:      $Source"
+            Write-Host "Destination: $Destination"
+            Write-Host
+            $dryRunSelection = Read-Host "Perform a dry run (no files copied)? [y/n]"
+            if ($dryRunSelection -eq 'y') { $Dry = $true }
 
-        Write-Host "Running all pre-defined backup jobs." -ForegroundColor Yellow
-        $Jobs.Values | ForEach-Object {
-            Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry
+            Write-Host
+            $confirmation = Read-Host "Are you sure you want to proceed with the backup? [y/n]"
+            if ($confirmation -ne 'y') {
+                Write-Host "Backup cancelled." -ForegroundColor Red
+            } else {
+                Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry
+            }
         }
-    } elseif (-not ([string]::IsNullOrEmpty($Source))) {
-        Write-Host "Perform a dry run (no files copied)?" -ForegroundColor White
-        $dryRunSelection = Read-Host "[y/n]"
-        if ($dryRunSelection -eq 'y') { $Dry = $true }
 
-        $confirmation = Read-Host "Are you sure you want to proceed with the backup? [y/n]"
-        if ($confirmation -ne 'y') {
-            Write-Host "Backup cancelled." -ForegroundColor Red
-            return
-        }
-        Start-BackupJob -SourcePath $Source -DestinationPath $Destination -IsDryRun:$Dry
+        Write-Host
+        Read-Host "Press Enter to return to the main menu..."
+        # Reset variables for the next loop iteration
+        $Source = $null
+        $Destination = $null
+        $All = $false
+        $Dry = $false
     }
 }

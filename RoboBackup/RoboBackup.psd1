@@ -1,24 +1,21 @@
 @{
     # Script module or binary module file associated with this manifest.
-    RootModule = 'RoboBackup.psm1'
+    RootModule        = 'RoboBackup.psm1'
 
     # Version number of this module.
-    ModuleVersion = '1.0.0'
+    ModuleVersion     = '1.0.0'
 
     # ID used to uniquely identify this module
-    GUID = 'f1d4e5c6-1b2a-4e9g-8c1h-9j2k3l4m5n6o'
+    GUID              = 'f1bda93a-f3c8-4d8e-9b9a-7a3d7b8e6f0c'
 
     # Author of this module
-    Author = 'Gemini'
+    Author            = 'kevinchatham'
 
     # Company or vendor of this module
-    CompanyName = 'Unknown'
-
-    # Copyright statement for this module
-    Copyright = '(c) 2025 Gemini. All rights reserved.'
+    CompanyName       = 'kevinchatham'
 
     # Description of the functionality provided by this module
-    Description = 'A PowerShell module to manage and execute Robocopy backup jobs.'
+    Description       = 'A powerful and flexible PowerShell module for running and managing file backups using Robocopy.'
 
     # Functions to export from this module
     FunctionsToExport = @(
