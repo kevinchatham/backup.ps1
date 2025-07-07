@@ -33,6 +33,32 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManage
 
 After installation, you may need to restart your PowerShell session or run `Import-Module RoboBackup` to make the command available.
 
+### Manual Installation
+
+For those who prefer not to run the installation script directly, you can perform a manual installation by following these steps:
+
+1.  **Clone or Download the Repository**
+
+    Clone the repository to your local machine using Git:
+    ```bash
+    git clone https://github.com/kevinchatham/backup.ps1.git
+    ```
+    Alternatively, you can [download the repository as a ZIP file](https://github.com/kevinchatham/backup.ps1/archive/refs/heads/main.zip) and extract it.
+
+2.  **Copy the Module Directory**
+
+    Copy the `RoboBackup` directory from the cloned repository into one of your PowerShell module directories. The most common user-specific location is:
+    - `~\Documents\PowerShell\Modules\`
+
+    You may need to create the `Modules` directory if it does not exist.
+
+3.  **Verify the Installation**
+
+    Open a new PowerShell terminal and run the following command to ensure the module is recognized:
+    ```powershell
+    Get-Module -ListAvailable -Name RoboBackup
+    ```
+
 ## Configuration
 
 The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define your backup jobs. The script searches for this file in the following order of priority:
