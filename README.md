@@ -34,17 +34,20 @@ The installation script requires the following standard PowerShell cmdlets to be
 
 These are included by default in modern versions of Windows and PowerShell. If you are on an older system and encounter errors, please ensure your PowerShell version is up to date.
 
-## Setup
+## Configuration
 
-The script finds its configuration file, `robobackup.json`, in the following order:
-1.  A path provided directly using the `-Config` parameter.
-2.  In the current working directory (where you are running the command).
-3.  In the module's installation directory (`~\Documents\PowerShell\Modules\RoboBackup`).
+The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define your backup jobs. The script searches for this file in the following order of priority:
+1.  A specific file path provided using the `-Config "C:\Path\to\robobackup.json"` parameter.
+2.  A file named `robobackup.json` in the current working directory (the folder you are in when you run the command).
+3.  A file named `robobackup.json` in the module's installation directory (`~\Documents\PowerShell\Modules\RoboBackup`).
 
-To get started:
-1.  **Create Your Configuration**: Find the module's installation directory, make a copy of `robobackup.template.json`, and rename it to `robobackup.json`. You can place this file in the module directory itself or in any project folder from which you intend to run the command.
-2.  **Define Your Backup Jobs**: Open `robobackup.json` and define your backup jobs. For example:
+### Getting Started
 
+1.  **Download the Template**: Get the configuration template file, [`robobackup.template.json`](https://github.com/kevinchatham/backup.ps1/blob/main/robobackup.template.json), directly from the RoboBackup GitHub repository.
+2.  **Rename and Place the File**: Rename the file to `robobackup.json` and place it in a convenient location. For most users, placing it in the folder where you intend to run your backups is the easiest approach.
+3.  **Define Your Backup Jobs**: Open `robobackup.json` in a text editor and define your backup jobs. The `source` and `destination` paths must be specified for each job.
+
+    Here is an example with two backup jobs defined:
     ```json
     {
       "backupJobs": [
@@ -109,7 +112,7 @@ Invoke-RoboBackup -All
 To run a backup without saving it as a job, specify the source and destination paths directly. This mode does not require a `robobackup.json` file.
 
 ```powershell
-Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\Some\BackupLocation"
+Invoke-RoboBackup -Source "C:\\Some\\Folder" -Destination "D:\\Some\\BackupLocation"
 ```
 
 ### Using a Specific Configuration File
@@ -132,7 +135,7 @@ Invoke-RoboBackup -Job "Photos Archive" -Dry
 Invoke-RoboBackup -All -Dry
 
 # Dry run of a manual backup
-Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\Some\BackupLocation" -Dry
+Invoke-RoboBackup -Source "C:\\Some\\Folder" -Destination "D:\\Some\\BackupLocation" -Dry
 ```
 
 ### Opening the Logs Directory
@@ -174,7 +177,7 @@ If you are developing the script and want to test your changes locally without i
 3.  **Run your test commands**. The `Invoke-RoboBackup` command will be available in your current session.
     ```powershell
     # Example: Test a manual backup with a dry run
-    Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\BackupLocation" -Dry
+    Invoke-RoboBackup -Source "C:\\Some\\Folder" -Destination "D:\\BackupLocation" -Dry
     ```
 4.  **Reload the module after making changes**: If you edit the `.psm1` file, you can reload it with the `-Force` parameter to see your changes.
     ```powershell
