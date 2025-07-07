@@ -86,7 +86,7 @@ From the main menu, you can:
 *   Display the full command-line help documentation.
 *   Exit the utility.
 
-After each backup operation, the script will pause so you can review the Robocopy output before pressing Enter to return to the main menu. The screen is cleared and redrawn between actions to keep the interface clean.
+After each backup operation, the script will pause so you can review the Robocopy output before pressing Enter to return to the main menu. The screen is cleared and redrawn between actions to keep the interface clean. When running a job from the interactive menu, you will be prompted to confirm whether to run it as a "dry run".
 
 ### Running a Pre-defined Job
 
@@ -155,7 +155,7 @@ The script provides a clear summary of the backup result based on the exit code 
 | 3    | Success: Files were copied and extra files were detected.            |
 | 5    | Warning: Some files were mismatched and did not copy.                |
 | 6    | Warning: Mismatched files and extra files were detected.             |
-| 7    | Success: Files were copied, but with some mismatches.                |
+| 7    | Success: Files were copied, but some were mismatched and extra files were detected. |
 | 8+   | Error: Robocopy failed with critical errors. Check the log.          |
 
 ## Logging
