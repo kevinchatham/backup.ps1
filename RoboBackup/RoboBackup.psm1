@@ -268,6 +268,9 @@ Result:         $ExitMessage
                 return
             }
 
+            # Use an [ordered] dictionary to preserve the job order from the JSON file.
+            $Jobs = [ordered]@{}
+
             foreach ($jobObject in $jobList) {
                 # In some PowerShell versions or environments, parsing the JSON objects can lead to odd null-like behavior
                 # where property access via dot notation (e.g., $job.name) fails and returns an empty or null value,
