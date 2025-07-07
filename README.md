@@ -159,10 +159,9 @@ You can use Windows Task Scheduler to run your backups automatically. The follow
 - Click **New...**.
 - **Action**: `Start a program`.
 - **Program/script**: `pwsh.exe` (or `powershell.exe`)
-- **Add arguments**: `-Command "& { Import-Module RoboBackup; Invoke-RoboBackup -All }"`
-- **Start in**: Enter the full path to the folder containing your `robobackup.json` file (e.g., `C:\Users\Kevin\Archive`).
+- **Add arguments**: `-Command "& { Import-Module RoboBackup; Invoke-RoboBackup -All -Config 'C:\Path\To\Your\robobackup.json' }"`
 
-> **Important**: Setting the **Start in** directory is crucial. It tells the script where to find your `robobackup.json` file when it runs automatically.
+> **Important**: Using the `-Config` parameter with an absolute path is the most reliable way to ensure the script can always find your configuration file when run via Task Scheduler. This avoids any ambiguity related to the "Start in" directory.
 
 > **Note on PowerShell Version**: While this module works with both modern PowerShell (`pwsh.exe`) and the older Windows PowerShell (`powershell.exe`), using `pwsh.exe` is strongly recommended for better performance and future compatibility.
 
