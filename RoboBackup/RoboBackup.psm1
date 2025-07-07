@@ -110,7 +110,7 @@ function Invoke-RoboBackup {
         New-Item -ItemType Directory -Path $LogDir | Out-Null
     }
     $TranscriptLogFile = Join-Path $LogDir "session-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
-    Start-Transcript -Path $TranscriptLogFile -Append
+    Start-Transcript -Path $TranscriptLogFile -Append | Out-Null
 
     try {
         # Helper function to create a new configuration file.
@@ -414,6 +414,6 @@ Result:         $ExitMessage
     }
     finally {
         Set-Location -Path $OriginalLocation
-        Stop-Transcript
+        Stop-Transcript | Out-Null
     }
 }
