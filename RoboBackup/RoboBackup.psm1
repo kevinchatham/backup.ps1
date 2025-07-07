@@ -96,6 +96,13 @@ function Invoke-RoboBackup {
     )
 
     $OriginalLocation = Get-Location
+    $LogDir = Join-Path $PSScriptRoot "logs"
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir | Out-Null
+    }
+    $TranscriptLogFile = Join-Path $LogDir "session-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
+    Start-Transcript -Path $TranscriptLogFile -Append
+
     try {
         # Helper function to get a descriptive message for a Robocopy exit code.
         function Get-RobocopyExitMessage($exitCode) {
@@ -371,5 +378,6 @@ Result:         $ExitMessage
     }
     finally {
         Set-Location -Path $OriginalLocation
+        Stop-Transcript
     }
 }

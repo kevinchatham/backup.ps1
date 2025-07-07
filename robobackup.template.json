@@ -3,12 +3,14 @@
     {
       "name": "Sample Job 1 (e.g., Documents)",
       "source": "C:\\Path\\To\\Your\\Documents",
-      "destination": "D:\\Backup\\Documents"
+      "destination": "D:\\Backup\\Documents",
+      "mirror": true
     },
     {
       "name": "Sample Job 2 (e.g., Photos)",
       "source": "C:\\Path\\To\\Your\\Pictures",
-      "destination": "\\\\YourNAS\\Backups\\Pictures"
+      "destination": "\\\\YourNAS\\Backups\\Pictures",
+      "mirror": true
     }
   ]
 }

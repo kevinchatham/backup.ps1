@@ -17,7 +17,7 @@
 - ⌨️ **Cmdlet-Style Usage**: Run backups with a clear, verb-noun command: `Invoke-RoboBackup`.
 - 🎨 **Interactive UI**: A colorful, user-friendly menu to guide you through backups without memorizing parameters.
 - 📄 **JSON Configuration**: Define all your regular backup jobs in a simple `robobackup.json` file.
-- 📝 **Detailed Logging**: Every backup operation creates a unique, timestamped log file.
+- 📝 **Comprehensive Logging**: Every session is fully recorded, and each Robocopy operation creates a unique, timestamped log file.
 - 🧹 **Automatic Log Rotation**: Keeps the 100 most recent log files and deletes older ones to save space.
 - 💨 **Dry Run Mode**: Simulate any backup operation without actually copying, moving, or deleting files.
 
@@ -109,6 +109,13 @@ This design makes your backup configurations highly portable. By placing a `robo
         ```
 
     In the example above, the "Documents" job will delete files from the backup if they are removed from the source, while the "Downloads" job will only add new files.
+
+## Logging
+
+`RoboBackup` creates two types of log files in the `RoboBackup/logs` directory:
+
+1.  **Session Transcript**: A complete transcript of the entire script's execution is saved as `session-YYYY-MM-DD_HH-mm-ss.log`. This log captures all console output, including startup messages, configuration validation, and any errors that occur, making it ideal for debugging scheduled tasks.
+2.  **Robocopy Log**: Each individual backup job generates a detailed `log-YYYY-MM-DD_HH-mm-ss.log` file containing the full output from the `robocopy.exe` command, including the list of copied files and the final summary.
 
 ## Usage
 
