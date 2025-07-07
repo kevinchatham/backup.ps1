@@ -269,6 +269,11 @@ Result:         $ExitMessage
             }
 
             foreach ($jobObject in $jobList) {
+                # In some PowerShell versions or environments, parsing the JSON objects can lead to odd null-like behavior
+                # where property access via dot notation (e.g., $job.name) fails and returns an empty or null value,
+                # even though the object appears to be populated correctly when inspected.
+                # To ensure robust and reliable property access, we manually convert each PSCustomObject job into a Hashtable.
+                # This avoids the parsing quirks and guarantees the script can read the job configuration.
                 $jobHashtable = @{}
                 $jobObject.PSObject.Properties | ForEach-Object {
                     $jobHashtable[$_.Name] = $_.Value
@@ -278,15 +283,6 @@ Result:         $ExitMessage
                 $jobSource = $jobHashtable.source
                 $jobDestination = $jobHashtable.destination
                 $jobMirror = $jobHashtable.mirror
-
-                # Debugging output to inspect the job object and its properties
-                Write-Host "--- Processing Job --- " -ForegroundColor DarkGray
-                Write-Host ($jobObject | Format-List | Out-String) -ForegroundColor DarkGray
-                Write-Host "Name:        '$jobName'" -ForegroundColor DarkGray
-                Write-Host "Source:      '$jobSource'" -ForegroundColor DarkGray
-                Write-Host "Destination: '$jobDestination'" -ForegroundColor DarkGray
-                Write-Host "Mirror:      '$jobMirror'" -ForegroundColor DarkGray
-                Write-Host "----------------------" -ForegroundColor DarkGray
 
                 if ([string]::IsNullOrEmpty($jobName) -or `
                         [string]::IsNullOrEmpty($jobSource) -or `

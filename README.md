@@ -247,18 +247,11 @@ Remove-Item -Path (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Powe
 
 ## Development and Local Testing
 
-If you are developing the script and want to test your changes locally:
+If you are developing the script and want to test your changes locally, the easiest method is to use the included `test.ps1` script.
 
 1.  **Open a PowerShell terminal** in the project's root directory.
-2.  **Import the module file directly**:
+2.  **Run the test script**:
     ```powershell
-    Import-Module .\RoboBackup\RoboBackup.psm1 -Force
+    .\test.ps1
     ```
-3.  **Run your test commands**:
-    ```powershell
-    Invoke-RoboBackup -Source "C:\Temp\Src" -Destination "C:\Temp\Dst" -Dry
-    ```
-4.  **Unload the module** when you are finished:
-    ```powershell
-    Remove-Module RoboBackup
-    ```
+This script will automatically clear the console, import the latest version of the module, and launch `Invoke-RoboBackup` in interactive mode, allowing you to quickly test your changes.
