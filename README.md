@@ -1,18 +1,25 @@
-# RoboBackup
+<p align="center">
+  <img src="./robobackup-logo.png" alt="robobackup-logo" width="150px" height="150px"/>
+  <br/>
+  <em>A simple, powerful backup utility for Windows.</em>
+  <br/><br/>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"/>
+  </a>
+  <img src="https://img.shields.io/badge/PowerShell-5.1%2B%20%7C%20Core-blueviolet" alt="PowerShell Compatible"/>
+</p>
 
-A powerful and flexible PowerShell module for running and managing file backups using Robocopy. It provides a simple command-line interface and an interactive menu to streamline your backup process.
-
-**Note on Compatibility:** This module is designed for the **Windows** operating system and works with both **Windows PowerShell 5.1** and **PowerShell Core (pwsh)**. It will **not** work on Linux or macOS because it fundamentally relies on `robocopy.exe`, a Windows-native command.
+`RoboBackup` is a PowerShell module for running configuration-driven file backups on Windows using `robocopy.exe`. It can be operated via a command-line interface or an interactive menu.
 
 ## Features
 
-*   **Simple Installation**: A one-line command to install or update the module from GitHub.
-*   **Cmdlet-Style Usage**: Run backups with a clear, verb-noun command: `Invoke-RoboBackup`.
-*   **Interactive UI**: Run the command without any parameters to launch a colorful, user-friendly menu that guides you through the backup process.
-*   **Configuration File**: Define all your regular backup tasks in a simple `robobackup.json` file for quick and repeatable execution.
-*   **Detailed Logging**: Every backup operation creates a unique, timestamped log file in a dedicated `logs` directory.
-*   **Automatic Log Rotation**: Keeps the 100 most recent log files and deletes older ones to save space.
-*   **Dry Run Mode**: Simulate any backup operation without actually copying, moving, or deleting any files.
+- 📦 **Simple Installation**: A one-line command to install the module.
+- ⌨️ **Cmdlet-Style Usage**: Run backups with a clear, verb-noun command: `Invoke-RoboBackup`.
+- 🎨 **Interactive UI**: A colorful, user-friendly menu to guide you through backups without memorizing parameters.
+- 📄 **JSON Configuration**: Define all your regular backup jobs in a simple `robobackup.json` file.
+- 📝 **Detailed Logging**: Every backup operation creates a unique, timestamped log file.
+- 🧹 **Automatic Log Rotation**: Keeps the 100 most recent log files and deletes older ones to save space.
+- 💨 **Dry Run Mode**: Simulate any backup operation without actually copying, moving, or deleting files.
 
 ## Installation
 
@@ -22,32 +29,23 @@ To install the `RoboBackup` module, open a PowerShell terminal and run the follo
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/kevinchatham/backup.ps1/main/install.ps1'))
 ```
 
-> **Note on Execution Policy**: The `Set-ExecutionPolicy Bypass` command is included to ensure the installation script can run in your current PowerShell session without being blocked. This is a common requirement for running local scripts and only affects the current process.
+> **Note on Execution Policy**: The `Set-ExecutionPolicy Bypass` command ensures the installation script can run without being blocked. This setting only affects the current PowerShell session.
 
 After installation, you may need to restart your PowerShell session or run `Import-Module RoboBackup` to make the command available.
-
-### Prerequisites
-
-The installation script requires the following standard PowerShell cmdlets to be available on your system:
-*   `Invoke-WebRequest` (for downloading the module)
-*   `Expand-Archive` (for unzipping the module)
-
-These are included by default in modern versions of Windows and PowerShell. If you are on an older system and encounter errors, please ensure your PowerShell version is up to date.
 
 ## Configuration
 
 The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define your backup jobs. The script searches for this file in the following order of priority:
 1.  A specific file path provided using the `-Config "C:\Path\to\robobackup.json"` parameter.
-2.  A file named `robobackup.json` in the current working directory (the folder you are in when you run the command).
+2.  A file named `robobackup.json` in the current working directory.
 3.  A file named `robobackup.json` in the module's installation directory (`~\Documents\PowerShell\Modules\RoboBackup`).
 
 ### Getting Started
 
-1.  **Download the Template**: Get the configuration template file, [`robobackup.template.json`](https://github.com/kevinchatham/backup.ps1/blob/main/robobackup.template.json), directly from the RoboBackup GitHub repository.
-2.  **Rename and Place the File**: Rename the file to `robobackup.json` and place it in a convenient location. For most users, placing it in the folder where you intend to run your backups is the easiest approach.
-3.  **Define Your Backup Jobs**: Open `robobackup.json` in a text editor and define your backup jobs. The `source` and `destination` paths must be specified for each job.
+1.  **Download the Template**: Get the configuration template file, [`robobackup.template.json`](https://github.com/kevinchatham/backup.ps1/blob/main/robobackup.template.json), directly from the repository.
+2.  **Rename and Place the File**: Rename it to `robobackup.json` and place it where you intend to run your backups.
+3.  **Define Your Backup Jobs**: Open `robobackup.json` and define your jobs.
 
-    Here is an example with two backup jobs defined:
     ```json
     {
       "backupJobs": [
@@ -67,123 +65,90 @@ The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define you
 
 ## Usage
 
-All commands are run from a PowerShell terminal. For detailed information about parameters and examples, you can use PowerShell's built-in help system:
-
-```powershell
-Get-Help Invoke-RoboBackup -Full
-```
+`Invoke-RoboBackup` can be run in different modes depending on the parameters you provide.
 
 ### Interactive Mode
 
-For the most user-friendly experience, run the command with no parameters. This launches a persistent, menu-driven interface that keeps the RoboBackup header at the top of the screen.
+For the most user-friendly experience, run the command with no parameters. This launches a persistent, menu-driven interface.
 
 ```powershell
 Invoke-RoboBackup
 ```
 
 From the main menu, you can:
-*   Run a single pre-defined job from your `robobackup.json`.
-*   Run all pre-defined jobs sequentially.
-*   Run a custom one-off backup by providing the source and destination.
-*   Open the logs directory in VS Code (if installed) or File Explorer.
-*   Display the full command-line help documentation.
-*   Exit the utility.
+- Run a single pre-defined job.
+- Run all pre-defined jobs sequentially.
+- Run a custom one-off backup.
+- Open the logs directory.
+- Display the full command-line help.
+- Exit the utility.
 
-After each backup operation, the script will pause so you can review the Robocopy output before pressing Enter to return to the main menu. The screen is cleared and redrawn between actions to keep the interface clean. When running a job from the interactive menu, you will be prompted to confirm whether to run it as a "dry run".
+### Command-Line Usage
 
-### Running a Pre-defined Job
+You can also run backups directly from the command line.
 
-To run a job that you have already defined in `robobackup.json`, use the `-Job` parameter.
-
+#### **Run a Pre-defined Job**
 ```powershell
 Invoke-RoboBackup -Job "My Documents"
 ```
 
-### Running All Pre-defined Jobs
-
-To run all jobs defined in `robobackup.json` sequentially, use the `-All` switch. The script will execute them in the order they appear in the file.
-
+#### **Run All Pre-defined Jobs**
 ```powershell
 Invoke-RoboBackup -All
 ```
 
-### Manual (One-Off) Backup
-
-To run a backup without saving it as a job, specify the source and destination paths directly. This mode does not require a `robobackup.json` file.
-
+#### **Perform a Manual (One-Off) Backup**
 ```powershell
-Invoke-RoboBackup -Source "C:\\Some\\Folder" -Destination "D:\\Some\\BackupLocation"
+Invoke-RoboBackup -Source "C:\Some\Folder" -Destination "D:\BackupLocation"
 ```
 
-### Using a Specific Configuration File
-
-Use the `-Config` parameter to point to a specific `robobackup.json` file. This is useful for managing multiple, separate sets of backup jobs.
-
+#### **Perform a Dry Run**
+Add the `-Dry` switch to any command to see what *would* happen without changing any files.
 ```powershell
-Invoke-RoboBackup -Config "robobackup.json" -All
-```
-
-### Performing a Dry Run
-
-To see what the script *would* do without making any changes, add the `-Dry` switch to any command.
-
-```powershell
-# Dry run of a single pre-defined job
 Invoke-RoboBackup -Job "Photos Archive" -Dry
-
-# Dry run of all pre-defined jobs
-Invoke-RoboBackup -All -Dry
-
-# Dry run of a manual backup
-Invoke-RoboBackup -Source "C:\\Some\\Folder" -Destination "D:\\Some\\BackupLocation" -Dry
 ```
 
-### Opening the Logs Directory
+### Parameters
 
-To quickly open the directory containing all the log files, use the `-Logs` switch. This will attempt to open the folder in Visual Studio Code if it's installed, otherwise it will fall back to the default Windows File Explorer.
+| Parameter | Description |
+| :--- | :--- |
+| `-Job <string>` | The name of a specific backup job to run from your `robobackup.json`. |
+| `-All` | A switch to run all backup jobs defined in your `robobackup.json`. |
+| `-Source <string>` | The source directory for a manual (one-off) backup. |
+| `-Destination <string>` | The destination directory for a manual (one-off) backup. |
+| `-Config <string>` | Specifies the full path to a `robobackup.json` file to use. |
+| `-Dry` | A switch to perform a dry run, simulating the backup without making changes. |
+| `-Logs` | A switch to open the logs directory in VS Code or File Explorer. |
 
-```powershell
-Invoke-RoboBackup -Logs
-```
-
-## Robocopy Exit Codes
+## Understanding Backup Results
 
 The script provides a clear summary of the backup result based on the exit code from Robocopy.
 
-| Code | Meaning                                                              |
-| :--- | :------------------------------------------------------------------- |
-| 0    | Success: No files were copied. Source and destination are identical. |
-| 1    | Success: All files were copied successfully.                         |
-| 2    | Success: Some extra files or directories were detected.              |
-| 3    | Success: Files were copied and extra files were detected.            |
-| 5    | Warning: Some files were mismatched and did not copy.                |
-| 6    | Warning: Mismatched files and extra files were detected.             |
-| 7    | Success: Files were copied, but some were mismatched and extra files were detected. |
-| 8+   | Error: Robocopy failed with critical errors. Check the log.          |
-
-## Logging
-
-All backup operations are logged in the `logs` directory within the module's installation path. Each log file is timestamped and contains a full report of the source, destination, options used, and the final result.
+| Code | Meaning |
+| :--- | :--- |
+| 0 | **Success**: No files were copied. Source and destination are identical. |
+| 1 | **Success**: All files were copied successfully. |
+| 2 | **Success**: Some extra files or directories were detected in the destination. |
+| 3 | **Success**: Files were copied and extra files were detected. |
+| 5 | **Warning**: Some files were mismatched and did not copy. |
+| 6 | **Warning**: Mismatched files and extra files were detected. |
+| 7 | **Success**: Files were copied, but some were mismatched and extra files were detected. |
+| 8+ | **Error**: Robocopy failed with critical errors. Check the log for details. |
 
 ## Development and Local Testing
 
-If you are developing the script and want to test your changes locally without installing the module system-wide, you can load it directly into your PowerShell session.
+If you are developing the script and want to test your changes locally:
 
-1.  **Open a PowerShell terminal** and navigate to the project's root directory.
+1.  **Open a PowerShell terminal** in the project's root directory.
 2.  **Import the module file directly**:
-    ```powershell
-    Import-Module .\RoboBackup\RoboBackup.psm1
-    ```
-3.  **Run your test commands**. The `Invoke-RoboBackup` command will be available in your current session.
-    ```powershell
-    # Example: Test a manual backup with a dry run
-    Invoke-RoboBackup -Source "C:\\Some\\Folder" -Destination "D:\\BackupLocation" -Dry
-    ```
-4.  **Reload the module after making changes**: If you edit the `.psm1` file, you can reload it with the `-Force` parameter to see your changes.
     ```powershell
     Import-Module .\RoboBackup\RoboBackup.psm1 -Force
     ```
-5.  **Unload the module** when you are finished testing:
+3.  **Run your test commands**:
+    ```powershell
+    Invoke-RoboBackup -Source "C:\Temp\Src" -Destination "C:\Temp\Dst" -Dry
+    ```
+4.  **Unload the module** when you are finished:
     ```powershell
     Remove-Module RoboBackup
     ```
