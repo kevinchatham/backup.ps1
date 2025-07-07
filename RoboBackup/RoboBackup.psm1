@@ -6,6 +6,7 @@ function Invoke-RoboBackup {
     .DESCRIPTION
     Invoke-RoboBackup is a powerful wrapper for the Windows Robocopy tool. It can be run in several modes:
     - Interactive Mode: If run with no parameters, it provides a menu to run pre-defined jobs, all jobs, or a custom one-off backup.
+    - Init Mode (-Init): Creates a new 'robobackup.json' configuration file in the specified directory.
     - Job Mode (-Job): Runs a single, specific backup job defined in the configuration file.
     - All Jobs Mode (-All): Runs all backup jobs defined in the configuration file sequentially.
     - Manual Mode (-Source, -Destination): Runs a one-off backup with the specified source and destination paths.
@@ -15,7 +16,9 @@ function Invoke-RoboBackup {
     It locates the configuration file 'robobackup.json' by searching the following locations in order:
     1. The path specified by the -Config parameter.
     2. The current working directory.
-    3. The script's own module directory.
+
+    .PARAMETER Init
+    A switch to create a new 'robobackup.json' configuration file.
 
     .PARAMETER Job
     The name of a specific backup job to run, as defined in the 'robobackup.json' file.
@@ -35,7 +38,7 @@ function Invoke-RoboBackup {
     A switch to run all backup jobs defined in the 'robobackup.json' file sequentially.
 
     .PARAMETER Config
-    Specifies the full path to a 'robobackup.json' file. If omitted, the script will search in the current directory and then the module directory.
+    Specifies the full path to a 'robobackup.json' file. If omitted, the script will search in the current directory.
 
     .PARAMETER Dry
     A switch to perform a dry run. This will simulate the backup operation, showing what would be copied or deleted, without making any actual changes.
@@ -46,6 +49,9 @@ function Invoke-RoboBackup {
     .EXAMPLE
     PS C:\> Invoke-RoboBackup
     Launches the interactive menu to guide the user through backup options.
+    .EXAMPLE
+    PS C:\> Invoke-RoboBackup -Init
+    Starts an interactive prompt to create a new configuration file.
     .EXAMPLE
     PS C:\> Invoke-RoboBackup -Job "My Documents"
     Runs the pre-defined backup job named "My Documents", using the 'mirror' setting from the config.
@@ -70,6 +76,9 @@ function Invoke-RoboBackup {
     #>
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]
     param(
+        [Parameter(ParameterSetName = 'Init', Mandatory = $true)]
+        [switch]$Init,
+
         [Parameter(ParameterSetName = 'Job', Mandatory = $true)]
         [string]$Job,
 
@@ -104,6 +113,32 @@ function Invoke-RoboBackup {
     Start-Transcript -Path $TranscriptLogFile -Append
 
     try {
+        # Helper function to create a new configuration file.
+        function New-Configuration {
+            $SchemaPath = Join-Path $PSScriptRoot "robobackup.schema.json"
+            if (-not (Test-Path $SchemaPath)) {
+                Write-Error "Configuration schema 'robobackup.schema.json' not found in module directory."
+                return
+            }
+
+            $DefaultPath = Join-Path (Get-Location) "robobackup.json"
+            $TargetPath = Read-Host "Enter the full path to create robobackup.json (or press Enter for current dir)"
+            if ([string]::IsNullOrWhiteSpace($TargetPath)) {
+                $TargetPath = $DefaultPath
+            }
+
+            if (Test-Path $TargetPath) {
+                $Overwrite = Read-Host "File '$TargetPath' already exists. Overwrite? [y/n]"
+                if ($Overwrite -ne 'y') {
+                    Write-Host "Configuration creation cancelled." -ForegroundColor Red
+                    return
+                }
+            }
+
+            Copy-Item -Path $SchemaPath -Destination $TargetPath -Force
+            Write-Host "Successfully created configuration file at: $TargetPath" -ForegroundColor Green
+        }
+        
         # Helper function to get a descriptive message for a Robocopy exit code.
         function Get-RobocopyExitMessage($exitCode) {
             switch ($exitCode) {
@@ -197,6 +232,11 @@ Result:         $ExitMessage
         }
 
         # --- Main Script Logic ---
+        if ($PSBoundParameters.ContainsKey('Init')) {
+            New-Configuration
+            return
+        }
+
         $Jobs = [ordered]@{}
         $ConfigPath = $null
 
@@ -208,10 +248,6 @@ Result:         $ExitMessage
         else {
             $CurrentDirConfig = Join-Path (Get-Location) "robobackup.json"
             if (Test-Path $CurrentDirConfig) { $ConfigPath = $CurrentDirConfig }
-            else {
-                $ModulePathConfig = Join-Path $PSScriptRoot "robobackup.json"
-                if (Test-Path $ModulePathConfig) { $ConfigPath = $ModulePathConfig }
-            }
         }
 
         if ($ConfigPath) {
@@ -226,7 +262,7 @@ Result:         $ExitMessage
             $ConfigDir = Split-Path -Path $ConfigPath -Parent
             if ($ConfigDir) { Set-Location -Path $ConfigDir }
         }
-
+        
         # --- Parameter Handling ---
         switch ($PsCmdlet.ParameterSetName) {
             'Job' {

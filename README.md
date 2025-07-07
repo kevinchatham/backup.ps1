@@ -14,6 +14,7 @@
 ## Features
 
 - 📦 **Simple Installation**: A one-line command to install the module.
+- 🚀 **Easy Initialization**: A one-line command to create a new configuration file.
 - ⌨️ **Cmdlet-Style Usage**: Run backups with a clear, verb-noun command: `Invoke-RoboBackup`.
 - 🎨 **Interactive UI**: A colorful, user-friendly menu to guide you through backups without memorizing parameters.
 - 📄 **JSON Configuration**: Define all your regular backup jobs in a simple `robobackup.json` file.
@@ -33,89 +34,44 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManage
 
 After installation, you may need to restart your PowerShell session or run `Import-Module RoboBackup` to make the command available.
 
-### Manual Installation
+## Getting Started
 
-For those who prefer not to run the installation script directly, you can perform a manual installation by following these steps:
+The fastest way to get started with `RoboBackup` is to use the built-in initialization command.
 
-1.  **Clone or Download the Repository**
+1.  **Create a Configuration File**
 
-    Clone the repository to your local machine using Git:
-
-    ```bash
-    git clone https://github.com/kevinchatham/backup.ps1.git
-    ```
-
-    Alternatively, you can [download the repository as a ZIP file](https://github.com/kevinchatham/backup.ps1/archive/refs/heads/main.zip) and extract it.
-
-2.  **Copy the Module Directory**
-
-    Copy the `RoboBackup` directory from the cloned repository into one of your PowerShell module directories. The most common user-specific location is:
-
-    - `~\Documents\PowerShell\Modules\`
-
-    You may need to create the `Modules` directory if it does not exist.
-
-3.  **Verify the Installation**
-
-    Open a new PowerShell terminal and run the following command to ensure the module is recognized:
-
+    Open a PowerShell terminal in the folder where you want to manage your backups and run:
     ```powershell
-    Get-Module -ListAvailable -Name RoboBackup
+    Invoke-RoboBackup -Init
+    ```
+    This will create a new `robobackup.json` file in the current directory.
+
+2.  **Define a Backup Job**
+
+    Open the new `robobackup.json` file and define your first backup job. For example, to back up a "Documents" folder to an external drive, your configuration might look like this:
+    ```json
+    {
+      "jobs": [
+        {
+          "name": "My Documents",
+          "source": "C:\Users\YourUser\Documents",
+          "destination": "E:\Backups\Documents",
+          "mirror": true
+        }
+      ]
+    }
     ```
 
-## Configuration
+3.  **Run the Backup**
 
-The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define your backup jobs. Each job in the configuration **must** have the following four properties:
-
--   `"name"`: A unique name to identify the job.
--   `"source"`: The directory to back up.
--   `"destination"`: The directory where the backup will be stored.
--   `"mirror"`: A boolean (`true` or `false`) to define the backup type.
-    -   `true`: Performs a **mirror** backup (`/MIR`), which makes the destination an exact copy of the source. Any files in the destination that do not exist in the source will be **deleted**.
-    -   `false`: Performs an **additive** backup (`/E`), which copies new and updated files without deleting extra files from the destination.
-
-The script searches for this file in the following order of priority:
-1.  A specific file path provided using the `-Config "C:\Path\to\robobackup.json"` parameter.
-2.  A file named `robobackup.json` in the current working directory.
-3.  A file named `robobackup.json` in the module's installation directory (`~\Documents\PowerShell\Modules\RoboBackup`).
-
-When a configuration file is loaded, the script automatically changes its working directory to the directory containing the `robobackup.json` file. This ensures that any **relative paths** used in the `source` and `destination` fields are resolved correctly from the location of the configuration file, not from where the script was invoked. The original working directory is restored when the script finishes.
-
-This design makes your backup configurations highly portable. By placing a `robobackup.json` file in the root of a project folder and using `.` as the `source`, you create a self-contained backup definition that travels with your files. To back up the entire folder, you just need to run `Invoke-RoboBackup` from within that folder.
-
-### Getting Started
-
-1.  **Download the Template**: Get the configuration template file, [`robobackup.template.json`](https://github.com/kevinchatham/backup.ps1/blob/main/robobackup.template.json), directly from the repository.
-2.  **Rename and Place the File**: Rename it to `robobackup.json` and place it where you intend to run your backups.
-3.  **Define Your Backup Jobs**: Open `robobackup.json` and define your jobs. You can use relative paths for portability.
-
-        ```json
-        {
-          "jobs": [
-            {
-              "name": "Documents (Mirror)",
-              "source": "C:\\Users\\Me\\Documents",
-              "destination": "D:\\Backups\\Documents",
-              "mirror": true
-            },
-            {
-              "name": "Downloads (Additive)",
-              "source": "C:\\Users\\Me\\Downloads",
-              "destination": "D:\\Backups\\Downloads",
-              "mirror": false
-            }
-          ]
-        }
-        ```
-
-    In the example above, the "Documents" job will delete files from the backup if they are removed from the source, while the "Downloads" job will only add new files.
-
-## Logging
-
-`RoboBackup` creates two types of log files in the `RoboBackup/logs` directory:
-
-1.  **Session Transcript**: A complete transcript of the entire script's execution is saved as `session-YYYY-MM-DD_HH-mm-ss.log`. This log captures all console output, including startup messages, configuration validation, and any errors that occur, making it ideal for debugging scheduled tasks.
-2.  **Robocopy Log**: Each individual backup job generates a detailed `log-YYYY-MM-DD_HH-mm-ss.log` file containing the full output from the `robocopy.exe` command, including the list of copied files and the final summary.
+    Now, you can run your backup using the interactive menu:
+    ```powershell
+    Invoke-RoboBackup
+    ```
+    Alternatively, you can run the specific job directly from the command line:
+    ```powershell
+    Invoke-RoboBackup -Job "My Documents"
+    ```
 
 ## Usage
 
@@ -141,6 +97,11 @@ From the main menu, you can:
 ### Command-Line Usage
 
 You can also run backups directly from the command line.
+
+#### **Initialize a New Configuration**
+```powershell
+Invoke-RoboBackup -Init
+```
 
 #### **Run a Pre-defined Job**
 
@@ -176,10 +137,45 @@ Add the `-Dry` switch to any command to see what _would_ happen without changing
 Invoke-RoboBackup -Job "Documents (Mirror)" -Dry
 ```
 
-### Parameters
+## Configuration
+
+### Job Configuration
+
+Each job in the `robobackup.json` file **must** have the following four properties:
+
+-   `"name"`: A unique name to identify the job.
+-   `"source"`: The directory to back up.
+-   `"destination"`: The directory where the backup will be stored.
+-   `"mirror"`: A boolean (`true` or `false`) to define the backup type.
+    -   `true`: Performs a **mirror** backup (`/MIR`), which makes the destination an exact copy of the source. Any files in the destination that do not exist in the source will be **deleted**.
+    -   `false`: Performs an **additive** backup (`/E`), which copies new and updated files without deleting extra files from the destination.
+
+### Portable Configurations
+
+The configuration system is designed to be highly portable. Because the script automatically uses a `robobackup.json` file in the current directory, you can place your configuration file in the root of a folder you intend to back up. By setting the `source` to `.` (the current directory), you create a self-contained backup definition that travels with your files.
+
+To run the backup, simply navigate into that folder in PowerShell and run `Invoke-RoboBackup`.
+
+### Config File Loading
+
+The script searches for `robobackup.json` in the following order of priority:
+1.  A specific file path provided using the `-Config "C:\Path\to\robobackup.json"` parameter.
+2.  A file named `robobackup.json` in the current working directory.
+
+When a configuration file is loaded, the script automatically changes its working directory to the directory containing the `robobackup.json` file. This ensures that any **relative paths** used in the `source` and `destination` fields are resolved correctly from the location of the configuration file, not from where the script was invoked. The original working directory is restored when the script finishes.
+
+## Logging
+
+`RoboBackup` creates two types of log files in the `RoboBackup/logs` directory:
+
+1.  **Session Transcript**: A complete transcript of the entire script's execution is saved as `session-YYYY-MM-DD_HH-mm-ss.log`. This log captures all console output, including startup messages, configuration validation, and any errors that occur, making it ideal for debugging scheduled tasks.
+2.  **Robocopy Log**: Each individual backup job generates a detailed `log-YYYY-MM-DD_HH-mm-ss.log` file containing the full output from the `robocopy.exe` command, including the list of copied files and the final summary.
+
+## Parameters
 
 | Parameter               | Description                                                                  |
 | :---------------------- | :--------------------------------------------------------------------------- |
+| `-Init`                 | A switch to create a new `robobackup.json` configuration file.               |
 | `-Job <string>`         | The name of a specific backup job to run from your `robobackup.json`.        |
 | `-All`                  | A switch to run all backup jobs defined in your `robobackup.json`.           |
 | `-Source <string>`      | The source directory for a manual (one-off) backup.                          |
@@ -240,6 +236,14 @@ You can use Windows Task Scheduler to run your backups automatically. The follow
 5.  Click **OK** to save the task. You may be prompted to enter your user password.
 
 Your automated backup task is now ready. It will run at the scheduled time without any manual intervention.
+
+## Uninstall
+
+To uninstall the `RoboBackup` module, run the following command in PowerShell. This will remove the module from your user profile.
+
+```powershell
+Remove-Item -Path (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules\RoboBackup') -Recurse -Force
+```
 
 ## Development and Local Testing
 
