@@ -135,6 +135,41 @@ The script provides a clear summary of the backup result based on the exit code 
 | 7 | **Success**: Files were copied, but some were mismatched and extra files were detected. |
 | 8+ | **Error**: Robocopy failed with critical errors. Check the log for details. |
 
+## Creating a Scheduled Backup Task
+
+You can use Windows Task Scheduler to run your backups automatically. The following steps show how to create a task that runs all jobs from your configuration file on a daily basis.
+
+1.  Open **Task Scheduler** from the Windows Start Menu.
+2.  In the **Actions** pane, click **Create Task...**.
+
+#### **General Tab**
+- **Name**: Give the task a descriptive name (e.g., `RoboBackup Daily`).
+- Select **Run whether user is logged on or not**.
+- Check the box for **Run with highest privileges**.
+
+#### **Triggers Tab**
+- Click **New...**.
+- Configure a schedule that suits your needs. For a daily backup, select **Daily** and set a start time (e.g., `2:00 AM`).
+
+#### **Actions Tab**
+- Click **New...**.
+- **Action**: `Start a program`.
+- **Program/script**: `pwsh.exe` (or `powershell.exe`)
+- **Add arguments**: `-Command "& { Import-Module RoboBackup; Invoke-RoboBackup -All }"`
+- **Start in**: Enter the full path to the folder containing your `robobackup.json` file (e.g., `C:\Users\Kevin\Archive`).
+
+> **Important**: Setting the **Start in** directory is crucial. It tells the script where to find your `robobackup.json` file when it runs automatically.
+
+> **Note on PowerShell Version**: While this module works with both modern PowerShell (`pwsh.exe`) and the older Windows PowerShell (`powershell.exe`), using `pwsh.exe` is strongly recommended for better performance and future compatibility.
+
+
+#### **Settings Tab**
+- Review the default settings. You may want to adjust options like **Stop the task if it runs longer than:** or **Stop if the computer switches to battery power** to fit your needs.
+
+5.  Click **OK** to save the task. You may be prompted to enter your user password.
+
+Your automated backup task is now ready. It will run at the scheduled time without any manual intervention.
+
 ## Development and Local Testing
 
 If you are developing the script and want to test your changes locally:
