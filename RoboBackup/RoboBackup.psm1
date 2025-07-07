@@ -346,9 +346,10 @@ Result:         $ExitMessage
                     Write-Host
                     $jobIndex = [int](Read-Host "Select a job") - 1
                     $jobName = ($Jobs.Keys | Select-Object -Index $jobIndex)
-                    $Source = $Jobs[$jobName].source
-                    $Destination = $Jobs[$jobName].destination
-                    $isMirror = if ($Jobs[$jobName].PSObject.Properties.Names -contains 'mirror') { $Jobs[$jobName].mirror } else { $true }
+                    $jobToRun = $Jobs[$jobName]
+                    $Source = $jobToRun.source
+                    $Destination = $jobToRun.destination
+                    $isMirror = $jobToRun.mirror
                 }
                 '2' { $All = $true }
                 '3' {
@@ -379,10 +380,6 @@ Result:         $ExitMessage
                 if ($dryRunSelection -eq 'y') { $Dry = $true }
 
                 $Jobs.Values | ForEach-Object {
-                    if ($_.PSObject.Properties.Names -notcontains 'mirror') {
-                        Write-Error "Job '$($_.name)' is missing the required 'mirror' property."
-                        return
-                    }
                     Start-BackupJob -SourcePath $_.source -DestinationPath $_.destination -IsDryRun:$Dry -MirrorBackup:$_.mirror
                 }
             }
