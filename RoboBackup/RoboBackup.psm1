@@ -252,16 +252,52 @@ Result:         $ExitMessage
 
         if ($ConfigPath) {
             if ($PsCmdlet.ParameterSetName -in @('Job', 'All', 'Interactive')) {
-                Write-Host "Using configuration file: $ConfigPath" -ForegroundColor DarkGray
+                Write-Host "Using configuration file: $ConfigPath"
             }
-            $ConfigContent = Get-Content $ConfigPath | ConvertFrom-Json
-            foreach ($job in $ConfigContent.jobs) {
-                if (-not $job.PSObject.Properties.Names.Contains('name') -or -not $job.PSObject.Properties.Names.Contains('source') -or -not $job.PSObject.Properties.Names.Contains('destination') -or -not $job.PSObject.Properties.Names.Contains('mirror')) {
-                    Write-Error "A job in '$ConfigPath' is missing one of the required properties: 'name', 'source', 'destination', or 'mirror'."
+
+            $Jobs = @{}
+
+            # This is the most robust method to parse a JSON file in PowerShell.
+            # 1. Get-Content -Raw: Reads the entire file as a single string.
+            # 2. ConvertFrom-Json -Depth 99: Parses the string, ensuring nested objects are handled.
+            # 3. .jobs: Directly access the 'jobs' property, which is more reliable.
+            $jobList = (Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json -Depth 99).jobs
+
+            if ($null -eq $jobList) {
+                Write-Error "The configuration file '$ConfigPath' does not contain a 'jobs' array or is improperly formatted."
+                return
+            }
+
+            foreach ($jobObject in $jobList) {
+                $jobHashtable = @{}
+                $jobObject.PSObject.Properties | ForEach-Object {
+                    $jobHashtable[$_.Name] = $_.Value
+                }
+
+                $jobName = $jobHashtable.name
+                $jobSource = $jobHashtable.source
+                $jobDestination = $jobHashtable.destination
+                $jobMirror = $jobHashtable.mirror
+
+                # Debugging output to inspect the job object and its properties
+                Write-Host "--- Processing Job --- " -ForegroundColor DarkGray
+                Write-Host ($jobObject | Format-List | Out-String) -ForegroundColor DarkGray
+                Write-Host "Name:        '$jobName'" -ForegroundColor DarkGray
+                Write-Host "Source:      '$jobSource'" -ForegroundColor DarkGray
+                Write-Host "Destination: '$jobDestination'" -ForegroundColor DarkGray
+                Write-Host "Mirror:      '$jobMirror'" -ForegroundColor DarkGray
+                Write-Host "----------------------" -ForegroundColor DarkGray
+
+                if ([string]::IsNullOrEmpty($jobName) -or `
+                        [string]::IsNullOrEmpty($jobSource) -or `
+                        [string]::IsNullOrEmpty($jobDestination) -or `
+                        $null -eq $jobMirror) {
+                    Write-Error "A job in '$ConfigPath' is missing a required property or has an empty value. Please check 'name', 'source', 'destination', and 'mirror'."
                     return
                 }
-                $Jobs[$job.name] = $job
+                $Jobs[$jobName] = $jobHashtable
             }
+
             $ConfigDir = Split-Path -Path $ConfigPath -Parent
             if ($ConfigDir) { Set-Location -Path $ConfigDir }
         }
