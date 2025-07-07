@@ -48,7 +48,7 @@ The `Invoke-RoboBackup` command relies on a `robobackup.json` file to define you
 
     ```json
     {
-      "backupJobs": [
+      "jobs": [
         {
           "name": "My Documents",
           "source": "C:\\Users\\YourUser\\Documents",

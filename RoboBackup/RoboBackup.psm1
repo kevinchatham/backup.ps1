@@ -198,7 +198,7 @@ Result:         $ExitMessage
 
     if ($ConfigPath) {
         $ConfigContent = Get-Content $ConfigPath | ConvertFrom-Json
-        $ConfigContent.backupJobs.ForEach({ $Jobs[$_.name] = $_ })
+        $ConfigContent.jobs.ForEach({ $Jobs[$_.name] = $_ })
     }
 
     # --- Parameter Handling ---

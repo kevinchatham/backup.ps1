@@ -1,5 +1,5 @@
 {
-  "backupJobs": [
+  "jobs": [
     {
       "name": "Sample Job 1 (e.g., Documents)",
       "source": "C:\\Path\\To\\Your\\Documents",
