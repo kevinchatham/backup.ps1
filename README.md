@@ -54,8 +54,8 @@ The fastest way to get started with `RoboBackup` is to use the built-in initiali
       "jobs": [
         {
           "name": "My Documents",
-          "source": "C:\Users\YourUser\Documents",
-          "destination": "E:\Backups\Documents",
+          "source": "C:\\Users\\YourUser\\Documents",
+          "destination": "E:\\Backups\\Documents",
           "mirror": true
         }
       ]
